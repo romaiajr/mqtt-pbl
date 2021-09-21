@@ -45,7 +45,7 @@
                         {{ sensor.icon }}
                       </v-icon>
                     </v-btn>
-                    {{ sensor.name === "Horário" ? new Date().toLocaleTimeString() : sensor.name === "Temperatura Externa" ? "23ºC" : sensor.status ? "Ativo" : "Desligado" }}
+                    {{ sensor.id === 2 ? new Date().toLocaleTimeString() : sensor.id === 3 || sensor.id === 4 ? "23ºC" : sensor.status ? "Ativo" : "Desligado" }}
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -85,25 +85,36 @@ export default {
     ],
     sensors: [
       {
+        id: 0,
         name: "Presença",
         status: false,
         icon: "mdi-account-question-outline",
         color: "white",
       },
       {
+        id: 1,
         name: "Abertura",
         status: false,
         icon: "mdi-door-open",
         color: "white",
       },
       {
+        id: 2,
         name: "Horário",
         status: false,
         icon: "mdi-clock-outline",
         color: "white",
       },
       {
+        id: 3,
         name: "Temperatura Externa",
+        status: false,
+        icon: "mdi-thermometer",
+        color: "white",
+      },
+      {
+        id: 4,
+        name: "Temperatura Interna",
         status: false,
         icon: "mdi-thermometer",
         color: "white",
