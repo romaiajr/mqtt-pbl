@@ -1,5 +1,5 @@
 <template>
-  <v-container > 
+  <v-container>
     <v-row>
       <v-col md="6">
         <v-card id="main-card" outlined>
@@ -14,8 +14,13 @@
                     {{ device.name }}
                   </v-card-title>
                   <v-card-text>
-                    <v-btn class="mx-2" fab large :color="device.status ? '#d3f8d3' : 'white'">
-                      <v-icon large >
+                    <v-btn
+                      class="mx-2"
+                      fab
+                      large
+                      :color="device.status ? '#d3f8d3' : 'white'"
+                    >
+                      <v-icon large>
                         {{ device.icon }}
                       </v-icon>
                     </v-btn>
@@ -40,12 +45,26 @@
                     {{ sensor.name }}
                   </v-card-title>
                   <v-card-text>
-                    <v-btn class="mx-2" fab large :color="sensor.color" @click="sensor.status = !sensor.status">
-                      <v-icon large >
+                    <v-btn
+                      class="mx-2"
+                      fab
+                      large
+                      :color="sensor.color"
+                      @click="sensor.status = !sensor.status"
+                    >
+                      <v-icon large>
                         {{ sensor.icon }}
                       </v-icon>
                     </v-btn>
-                    {{ sensor.id === 2 ? new Date().toLocaleTimeString() : sensor.id === 3 || sensor.id === 4 ? "23ºC" : sensor.status ? "Ativo" : "Desligado" }}
+                    {{
+                      sensor.id === 2
+                        ? new Date().toLocaleTimeString()
+                        : sensor.id === 3 || sensor.id === 4
+                        ? "23ºC"
+                        : sensor.status
+                        ? "Ativo"
+                        : "Desligado"
+                    }}
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -57,6 +76,8 @@
   </v-container>
 </template>
 <script>
+import config from "../utils/mqtt_config";
+import mqtt from 'mqtt'
 export default {
   name: "App",
   data: () => ({
@@ -120,7 +141,43 @@ export default {
         color: "white",
       },
     ],
+    client: {
+      connected: false,
+    },
   }),
+  methods: {
+    // Create connection
+    createConnection() {
+      // Connect string, and specify the connection method used through protocol
+      // ws unencrypted WebSocket connection
+      // wss encrypted WebSocket connection
+      // mqtt unencrypted TCP connection
+      // mqtts encrypted TCP connection
+      // wxs WeChat mini app connection
+      // alis Alipay mini app connection
+      console.log(config)
+      const { host, port, endpoint, ...options } = config.connection;
+      const connectUrl = `ws://${host}:${port}${endpoint}`;
+      try {
+        this.client = mqtt.connect(connectUrl, options);
+      } catch (error) {
+        console.log("mqtt.connect error", error);
+      }
+      this.client.on("connect", () => {
+        console.log("Connection succeeded!");
+      });
+      this.client.on("error", (error) => {
+        console.log("Connection failed", error);
+      });
+      this.client.on("message", (topic, message) => {
+        this.receiveNews = this.receiveNews.concat(message);
+        console.log(`Received message ${message} from topic ${topic}`);
+      });
+    },
+  },
+  created () {
+    this.createConnection();
+  },
 };
 </script>
 <style>
