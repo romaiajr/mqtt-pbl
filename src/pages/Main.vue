@@ -19,6 +19,7 @@
                       fab
                       large
                       :color="device.status ? '#d3f8d3' : 'white'"
+                      @click="handleDevice(device)"
                     >
                       <v-icon large>
                         {{ device.icon }}
@@ -32,58 +33,38 @@
           </v-container>
         </v-card>
       </v-col>
-      <!-- <v-col md="6">
-        <v-card id="main-card" outlined>
-          <v-card-title class="d-flex justify-center">
-            <h2>Sensores</h2>
-          </v-card-title>
-          <v-container>
-            <v-row>
-              <v-col md="4" v-for="sensor in sensors" :key="sensor.name">
-                <v-card>
-                  <v-card-title>
-                    {{ sensor.name }}
-                  </v-card-title>
-                  <v-card-text>
-                    <v-btn
-                      class="mx-2"
-                      fab
-                      large
-                      :color="sensor.color"
-                      @click="sensor.status = !sensor.status"
-                    >
-                      <v-icon large>
-                        {{ sensor.icon }}
-                      </v-icon>
-                    </v-btn>
-                    {{
-                      sensor.id === 2
-                        ? new Date().toLocaleTimeString()
-                        : sensor.id === 3 || sensor.id === 4
-                        ? "23ºC"
-                        : sensor.status
-                        ? "Ativo"
-                        : "Desligado"
-                    }}
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-card>
-      </v-col> -->
     </v-row>
   </v-container>
 </template>
 <script>
-import config from "../utils/devices_sensors";
 export default {
   name: "App",
   data: () => ({
     message: null,
     mqtt: null,
-    devices: config.devices,
-    sensors: config.sensors,
+    devices: [
+      {
+        name: "Iluminação interna",
+        status: true,
+        icon: "mdi-lamp-outline",
+      },
+      {
+        name: "Iluminação Garagem",
+        status: false,
+        icon: "mdi-lamp-outline",
+      },
+      {
+        name: "Iluminação Jardim",
+        status: true,
+        icon: "mdi-lamp-outline",
+      },
+      // { name: "Sirene", status: false, icon: "mdi-alarm", color: "#ffcccb" },
+      // {
+      //   name: "Ar Condicionado",
+      //   status: true,
+      //   icon: "mdi-hvac",
+      // },
+    ],
   }),
   methods: {
     createConnection() {
@@ -91,8 +72,8 @@ export default {
         this.mqtt = new Paho.MQTT.Client("maqiatto.com", 8883, "web");
         this.mqtt.connect({
           mqttVersion: 3,
-          userName: "hiago23rangel@gmail.com",
-          password: "2314",
+          userName: "romaiajr5@gmail.com",
+          password: "7711",
           onSuccess: this.onConnect,
         });
       } catch (e) {
@@ -100,11 +81,18 @@ export default {
       }
     },
     onConnect() {
-      this.mqtt.onMessageArrived = this.onMessageArrived
-      this.mqtt.subscribe("hiago23rangel@gmail.com/pbl2");
+      this.mqtt.onMessageArrived = this.onMessageArrived;
+      this.mqtt.subscribe("romaiajr5@gmail.com/rasp");
     },
     onMessageArrived(message) {
-      console.log("onMessageArrived:" + message.payloadString);
+      var res = JSON.parse(message.payloadString);
+      this.devices[res.id].status = res.message;
+    },
+    handleDevice(device) {
+      device.status = !device.status;
+      var message = new Paho.MQTT.Message(JSON.stringify({ status: device.status }));
+      message.destinationName = "romaiajr5@gmail.com/web";
+      this.mqtt.send(message);
     },
   },
   created() {
