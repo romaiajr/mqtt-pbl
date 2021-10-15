@@ -69,7 +69,7 @@ export default {
   methods: {
     createConnection() {
       try {
-        this.mqtt = new Paho.MQTT.Client("maqiatto.com", 3883, "web");
+        this.mqtt = new Paho.MQTT.Client("maqiatto.com", 8883, "web");
         this.mqtt.connect({
           mqttVersion: 3,
           userName: "romaiajr5@gmail.com",
@@ -86,11 +86,15 @@ export default {
     },
     onMessageArrived(message) {
       var res = JSON.parse(message.payloadString);
-      this.devices[res.id].status = res.message;
+      if (res.event === "OnChangeState") {
+        this.devices[res.id].status = res.data.state;
+      }
     },
     handleDevice(device) {
       device.status = !device.status;
-      var message = new Paho.MQTT.Message(JSON.stringify({ status: device.status }));
+      var message = new Paho.MQTT.Message(
+        JSON.stringify({ status: device.status })
+      );
       message.destinationName = "romaiajr5@gmail.com/web";
       this.mqtt.send(message);
     },
