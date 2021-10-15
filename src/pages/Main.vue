@@ -69,7 +69,7 @@ export default {
   methods: {
     createConnection() {
       try {
-        this.mqtt = new Paho.MQTT.Client("maqiatto.com", 8883, "web");
+        this.mqtt = new Paho.MQTT.Client("maqiatto.com", 3883, "web");
         this.mqtt.connect({
           mqttVersion: 3,
           userName: "romaiajr5@gmail.com",
