@@ -19,7 +19,7 @@
                       fab
                       large
                       :color="device.status ? '#d3f8d3' : 'white'"
-                      @click="handleDevice(device)"
+                      @click="publish(device)"
                     >
                       <v-icon large>
                         {{ device.icon }}
@@ -87,16 +87,19 @@ export default {
     onMessageArrived(message) {
       var res = JSON.parse(message.payloadString);
       if (res.event === "OnChangeState") {
-        this.devices[res.id].status = res.data.state;
+        this.setState(res.id, res.data.state)
       }
     },
-    handleDevice(device) {
+    publish(device) {
       device.status = !device.status;
       var message = new Paho.MQTT.Message(
         JSON.stringify({ status: device.status })
       );
       message.destinationName = "romaiajr5@gmail.com/web";
       this.mqtt.send(message);
+    },
+    setState(id, state){
+      this.device[id].status = state;
     },
   },
   created() {
