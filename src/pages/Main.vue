@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <v-row>
-      <v-col md="12">
+      <v-col xs="12">
         <v-card id="main-card" outlined>
           <v-card-title class="d-flex justify-center">
             <h2>Dispositivos</h2>
@@ -44,16 +44,19 @@ export default {
     mqtt: null,
     devices: [
       {
+        id: 0,
         name: "Iluminação interna",
         status: true,
         icon: "mdi-lamp-outline",
       },
       {
+        id: 1,
         name: "Iluminação Garagem",
         status: false,
         icon: "mdi-lamp-outline",
       },
       {
+        id: 2,
         name: "Iluminação Jardim",
         status: true,
         icon: "mdi-lamp-outline",
@@ -86,20 +89,27 @@ export default {
     },
     onMessageArrived(message) {
       var res = JSON.parse(message.payloadString);
+      console.log(res);
       if (res.event === "OnChangeState") {
-        this.setState(res.id, res.data.state)
+        this.setState(res.id, res.data.state);
       }
     },
+    //REVIEW
     publish(device) {
       device.status = !device.status;
       var message = new Paho.MQTT.Message(
-        JSON.stringify({ status: device.status })
+        JSON.stringify({
+          data: { state: device.status },
+          event: "onChangeState",
+          id: device.id,
+        })
       );
       message.destinationName = "romaiajr5@gmail.com/web";
+      console.log(JSON.parse(message.payloadString));
       this.mqtt.send(message);
     },
-    setState(id, state){
-      this.device[id].status = state;
+    setState(id, state) {
+      this.devices[id].status = state;
     },
   },
   created() {
