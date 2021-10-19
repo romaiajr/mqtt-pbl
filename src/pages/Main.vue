@@ -32,11 +32,7 @@
               <div id="luz">
                 <h4>Horário de funcionamento das luzes internas:</h4>
                 Horário inicial:
-                <input
-                  type="time"
-                  class="mt-1"
-                  v-model="form_luz.time_start"
-                />
+                <input type="time" class="mt-1" v-model="form_luz.time_start" />
                 Horário Final:
                 <input type="time" v-model="form_luz.time_end" />
                 <br />
@@ -81,7 +77,7 @@
               <v-divider />
               <div v-if="sirene.status">
                 <v-alert dense outlined type="error">
-                  <b>Invasão ocorrendo:</b> {{sirene.motivo}}
+                  <b>Invasão ocorrendo:</b> {{ sirene.motivo }}
                 </v-alert>
               </div>
             </v-col>
@@ -104,13 +100,13 @@ export default {
       status: false,
       motivo: null,
     },
-    form_temp:{
+    form_temp: {
       max: "",
-      min: ""
+      min: "",
     },
-    form_luz:{
+    form_luz: {
       time_start: "",
-      time_end: ""
+      time_end: "",
     },
     devices: [
       {
@@ -173,15 +169,18 @@ export default {
     },
     onMessageArrived(message) {
       var res = JSON.parse(message.payloadString);
-      if (res.event === "OnChangeState") {
+      if (res.event === "onChangeState") {
         this.setState(res.id, res.data.state);
       } else if (res.event === "onChangeInterval") {
         this.setInterval(res.id, res.data);
       } else if (res.event === "setup") {
         this.devices = res.data.devices;
         // this.isLoading = false;
-      } else if (res.event === "invasion"){
-        this.sirene = res.data.sirene
+      } else if (res.event === "onInvasion") {
+        this.sirene = res.data.sirene;
+        if (res.data.sirene) {
+          console.log("invasão");
+        }
       }
     },
     publish(message) {
