@@ -322,11 +322,6 @@ export default {
       this.show = true;
       var res = await api.getLog()
       this.logs = res.data;
-      await api.newLog({
-        status: true,
-        motivo: "Abertura de Janela",
-        horario: this.dateNow(),
-      });
     },
   },
   computed: {
