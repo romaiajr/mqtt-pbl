@@ -75,6 +75,13 @@
               </div>
               <br />
               <v-divider />
+              <br />
+              <div>
+                <v-btn depressed color="success" small block @click="showLog"
+                  >Histórico do Alarme</v-btn
+                >
+              </div>
+              <br />
               <div v-if="sirene.status">
                 <v-alert dense outlined type="error">
                   <b>Invasão ocorrendo:</b> {{ sirene.motivo }}
@@ -88,25 +95,63 @@
     <div class="text-center" v-if="isLoading" id="loading">
       <v-progress-circular indeterminate color="yellow"></v-progress-circular>
     </div>
+    <v-dialog v-model="show" width="750">
+      <v-card>
+        <v-card-title class=" primary">
+          <h5 :style="{ color: 'white' }">Histórico do Alarme</h5>
+        </v-card-title>
+        
+        <v-card-text >
+          <div v-if="logs"> <v-simple-table >
+            <template v-slot:default>
+              <thead>
+                <tr>
+                  <th class="text-left">
+                    Horário
+                  </th>
+                  <th class="text-left">
+                    Motivo
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="log in logs" :key="log.horario">
+                  <td>{{ log.horario }}</td>
+                  <td>{{ log.motivo }}</td>
+                </tr>
+              </tbody>
+            </template>
+          </v-simple-table></div>
+         
+        </v-card-text>
+        <v-divider></v-divider>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" text @click="show = false">
+            Fechar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 <script>
+import api from "../services/api";
 export default {
   name: "App",
   data: () => ({
-    message: null,
     mqtt: null,
     sirene: {
       status: false,
       motivo: null,
     },
     form_temp: {
-      max: "",
-      min: "",
+      max: null,
+      min: null,
     },
     form_luz: {
-      time_start: "",
-      time_end: "",
+      time_start: null,
+      time_end: null,
     },
     devices: [
       {
@@ -141,11 +186,12 @@ export default {
       },
     ],
     isLoading: false,
+    show: false,
+    logs: [],
   }),
   methods: {
     createConnection() {
       try {
-        // this.isLoading = true;
         this.mqtt = new Paho.MQTT.Client("maqiatto.com", 8883, "website");
         this.mqtt.connect({
           mqttVersion: 3,
@@ -160,83 +206,138 @@ export default {
     onConnect() {
       this.mqtt.onMessageArrived = this.onMessageArrived;
       this.mqtt.subscribe("romaiajr5@gmail.com/web");
-      var message = new Paho.MQTT.Message(
-        JSON.stringify({
-          event: "setup",
-        })
-      );
+      var message = new Paho.MQTT.Message("setup");
       message.destinationName = "romaiajr5@gmail.com/rasp";
     },
-    onMessageArrived(message) {
-      var res = JSON.parse(message.payloadString);
-      if (res.event === "onChangeState") {
-        this.setState(res.id, res.data.state);
-      } else if (res.event === "onChangeInterval") {
-        this.setInterval(res.id, res.data);
-      } else if (res.event === "setup") {
-        this.devices = res.data.devices;
-        // this.isLoading = false;
-      } else if (res.event === "onInvasion") {
-        this.sirene = res.data.sirene;
-        if (res.data.sirene) {
-          console.log("invasão");
+    async onMessageArrived(message) {
+      // var res = JSON.parse(message.payloadString);
+      // if (res.event === "onChangeState") {
+      //   this.setState(res.id, res.data.state);
+      // } else if (res.event === "onChangeInterval") {
+      //   this.setInterval(res.id, res.data);
+      // } else if (res.event === "setup") {
+      //   this.devices = res.data.devices;
+      //   // this.isLoading = false;
+      // } else if (res.event === "onInvasion") {
+      //   this.sirene = res.data.sirene;
+      //   if (res.data.sirene) {
+      //     console.log("invasão");
+      //   }
+      // }
+      var res = message.payloadString;
+      var message = res.split(",");
+      if (message[0] === "onChangeState") {
+        this.setState(message[1], message[2]);
+      } else if (
+        ["onChangeDateInterval", "onChangeTempInterval"].includes(message[0])
+      ) {
+        this.setInterval(message[1], message[2], message[3]);
+      } else if (message[0] === "onInvasion") {
+        this.sirene.status = message[2];
+        this.sirene.motivo = message[3];
+        if (message[2] === "1") {
+          await api.newLog({
+            status: true,
+            motivo: this.sirene.motivo,
+            horario: this.dateNow(),
+          });
         }
       }
     },
     publish(message) {
+      console.log(message);
       message.destinationName = "romaiajr5@gmail.com/rasp";
       this.mqtt.send(message);
     },
     changeState(device) {
+      // this.publish(
+      //   new Paho.MQTT.Message(
+      //     JSON.stringify({
+      //       data: { state: device.status },
+      //       event: "onChangeState",
+      //       id: device.id,
+      //     })
+      //   )
+      // );
       this.publish(
-        new Paho.MQTT.Message(
-          JSON.stringify({
-            data: { state: device.status },
-            event: "onChangeState",
-            id: device.id,
-          })
-        )
+        new Paho.MQTT.Message(`onChangeState,${device.id},${device.status}`)
       );
-      console.log(device.status);
     },
     setState(id, state) {
-      this.devices[id].status = state;
+      // this.devices[id].status = state;
+      this.devices[id].status = state === "1" ? true : false;
     },
-    setInterval(id, data) {
+    setInterval(id, start, end) {
+      // if (id === 0) {
+      //   this.devices[0].time_start = data.time_start;
+      //   this.devices[0].time_end = data.time_end;
+      // } else if (id === 4) {
+      //   this.devices[4].max = data.max;
+      //   this.devices[4].min = data.min;
       if (id === 0) {
-        this.devices[0].time_start = data.time_start;
-        this.devices[0].time_end = data.time_end;
+        this.devices[0].time_start = start;
+        this.devices[0].time_end = end;
       } else if (id === 4) {
-        this.devices[4].max = data.max;
-        this.devices[4].min = data.min;
+        this.devices[4].max = start;
+        this.devices[4].min = end;
       }
     },
     submit(type) {
       // this.isLoading = true;
       var message =
         type === 1
-          ? JSON.stringify({
-              data: {
-                start: this.form_luz.time_start,
-                end: this.form_luz.time_end,
-              },
-              event: "onChangeInterval",
-              id: 0,
-            })
-          : JSON.stringify({
-              data: { min: this.form_temp.min, max: this.form_temp.max },
-              event: "onChangeInterval",
-              id: 4,
-            });
+          ? `onChangeDateInterval, 0, ${
+              this.form_luz.time_start.split(":")[0]
+            }, ${this.form_luz.time_end.split(":")[0]}`
+          : // JSON.stringify({
+            //   data: {
+            //     start: this.form_luz.time_start,
+            //     end: this.form_luz.time_end,
+            //   },
+            //   event: "onChangeInterval",
+            //   id: 0,
+            // })
+            `onChangeTempInterval, 4, ${this.form_temp.min}, ${this.form_temp.max}`;
+      // JSON.stringify({
+      //     data: { min: this.form_temp.min, max: this.form_temp.max },
+      //     event: "onChangeInterval",
+      //     id: 4,
+      //   });
       this.publish(new Paho.MQTT.Message(message));
+    },
+    dateNow() {
+      var today = new Date();
+      var date =
+        today.getDate() +
+        "-" +
+        (today.getMonth() + 1) +
+        "-" +
+        today.getFullYear();
+      var time =
+        today.getHours() + ":" + today.getMinutes();
+      var dateTime = date + " " + time;
+      return dateTime;
+    },
+    async showLog() {
+      this.show = true;
+      var res = await api.getLog()
+      this.logs = res.data;
+      await api.newLog({
+        status: true,
+        motivo: "Abertura de Janela",
+        horario: this.dateNow(),
+      });
     },
   },
   computed: {
     isDisabled() {
-      return this.devices[0].time_start === null ||
-        this.devices[0].time_end === null
-        ? true
-        : false;
+      return this.form_luz.time_start !== null &&
+        this.form_luz.time_end !== null
+        ? this.form_luz.time_start.split(":")[0] !==
+          this.form_luz.time_end.split(":")[0]
+          ? false
+          : true
+        : true;
     },
   },
   created() {
